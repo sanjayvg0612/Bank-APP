@@ -1,4 +1,7 @@
 import os
+from pathlib import Path
+from urllib.parse import quote_plus
+
 from flask import Flask, jsonify
 from flask_login import LoginManager
 from flask_cors import CORS
@@ -17,20 +20,47 @@ FRONTEND_ORIGINS = [
 ]
 
 
+def load_env_file():
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"\'')
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_env_file()
+
+
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
-    db_user = os.environ.get("DB_USER", "root")
-    db_password = os.environ.get("DB_PASSWORD", "")
-    db_host = os.environ.get("DB_HOST", "localhost")
+    database_url = os.environ.get("DATABASE_URL")
+    db_user = os.environ.get("DB_USER")
+    db_password = os.environ.get("DB_PASSWORD")
+    db_host = os.environ.get("DB_HOST")
     db_port = os.environ.get("DB_PORT", "3306")
     db_name = os.environ.get("DB_NAME", "bankdb")
 
-    db_uri = (
-        f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    )
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", db_uri)
+    if database_url:
+        db_uri = database_url
+    elif db_host:
+        encoded_password = quote_plus(db_password or "")
+        db_uri = (
+            f"mysql+pymysql://{db_user or 'admin'}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+        )
+    else:
+        db_uri = "sqlite:///bank.db"
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
