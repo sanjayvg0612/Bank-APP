@@ -1,12 +1,12 @@
-﻿<!doctype html>
+<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0;url=/billpay" />
+  <meta http-equiv="refresh" content="0;url=/" />
   <title>Opening SecureBank</title>
   <style>body{font-family:Arial,Helvetica,sans-serif;padding:40px;text-align:center;background:#f2f4f7;color:#002b5c}a{color:#0b5ed7}</style>
 </head>
 <body>
-  <p>Opening the modern SecureBank app... <a href="/billpay">Click here if not redirected</a></p>
+  <p>Opening the modern SecureBank app... <a href="/">Click here if not redirected</a></p>
 </body>
 </html>
