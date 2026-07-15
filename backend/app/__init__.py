@@ -20,7 +20,17 @@ FRONTEND_ORIGINS = [
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///bank.db"
+
+    db_user = os.environ.get("DB_USER", "root")
+    db_password = os.environ.get("DB_PASSWORD", "")
+    db_host = os.environ.get("DB_HOST", "localhost")
+    db_port = os.environ.get("DB_PORT", "3306")
+    db_name = os.environ.get("DB_NAME", "bankdb")
+
+    db_uri = (
+        f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    )
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", db_uri)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
