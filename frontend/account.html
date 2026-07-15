@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account - SecureBank</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    <main class="container">
+        <a class="back-link" href="dashboard.html">&larr; Back to dashboard</a>
+
+        <div class="summary-card">
+            <span class="summary-label" id="accountTitle">Loading...</span>
+            <span class="summary-value" id="accountBalance"></span>
+            <span class="summary-sub" id="accountIfsc"></span>
+        </div>
+
+        <div class="quick-actions">
+            <a href="transfer.html" class="btn-secondary">Transfer funds</a>
+            <a href="#" id="statementLink" class="btn-secondary">View statement</a>
+        </div>
+
+        <h2>Recent transactions</h2>
+        <table class="txn-table">
+            <thead>
+                <tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Balance</th></tr>
+            </thead>
+            <tbody id="txnBody"></tbody>
+        </table>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/account.js"></script>
+</body>
+</html>
