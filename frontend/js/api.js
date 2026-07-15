@@ -1,8 +1,7 @@
-// Use the current origin by default so the app works on localhost, EC2, or a domain.
-// If the API is served through a reverse proxy under the same host, this will work automatically.
-const API_BASE = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1")
-    ? "http://localhost:5000/api"
-    : "/api";
+// Use a code-level proxy path by default so the frontend always sends requests
+// to the same origin (`/api`) which the Node server or Nginx can proxy to Flask.
+// If `window.API_BASE` is injected by the server, prefer that value.
+const API_BASE = window.API_BASE || '/api';
 
 async function apiRequest(path, options = {}) {
     try {
