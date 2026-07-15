@@ -91,3 +91,37 @@ class BillPayment(db.Model):
     amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), default="success")
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    read = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "message": self.message,
+            "read": self.read,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class Beneficiary(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    account_number = db.Column(db.String(20), nullable=False)
+    ifsc = db.Column(db.String(11), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "account_number": self.account_number,
+            "ifsc": self.ifsc,
+            "created_at": self.created_at.isoformat(),
+        }

@@ -1,0 +1,13 @@
+[Unit]
+Description=SecureBank Node frontend server
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Bank-APP/frontend
+Environment=API_TARGET=http://127.0.0.1:5000
+ExecStart=/usr/bin/npm start --prefix /home/ubuntu/Bank-APP/frontend
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

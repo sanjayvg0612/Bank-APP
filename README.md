@@ -59,3 +59,22 @@ Since backend and frontend are now independent, this maps directly onto the
 CI/CD pipeline setup: the backend can go through the Docker/EKS pipeline
 stages, and the frontend can be built as static files and served from S3 +
 CloudFront - which is a common real-world split for this kind of app.
+
+Running on a single EC2 instance (without Nginx)
+
+- You can run the Flask backend and Node frontend as separate services on the EC2 instance. Example systemd unit files are provided under `deploy/systemd/` — review and adjust paths and environment variables before enabling them.
+
+Stripe sandbox notes
+
+- To enable Stripe sandbox for top-ups, set `STRIPE_SECRET_KEY` on the backend environment. The backend will create a PaymentIntent; integrate Stripe.js on the frontend if you want to collect real card details.
+ 
+Frontend config endpoint
+
+- The backend exposes `GET /api/config` which returns `stripe_publishable_key` when set. The React app will fetch this key automatically for the Top-up page. Set both environment variables on the backend before starting it:
+
+```bash
+export STRIPE_SECRET_KEY="sk_test_..."
+export STRIPE_PUBLISHABLE_KEY="pk_test_..."
+```
+
+For Windows PowerShell use `$env:STRIPE_SECRET_KEY = 'sk_test_...'`.

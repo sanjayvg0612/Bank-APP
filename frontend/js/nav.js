@@ -10,6 +10,9 @@ async function renderNav() {
                     <a href="dashboard.html">Dashboard</a>
                     <a href="transfer.html">Transfer</a>
                     <a href="billpay.html">Pay bills</a>
+                    <a href="beneficiaries.html">Beneficiaries</a>
+                    <a href="topup.html">Add money</a>
+                    <a href="notifications.html">Notifications</a>
                     <span class="nav-user">${user.full_name}</span>
                     <a href="#" id="logoutLink">Logout</a>
                 </nav>

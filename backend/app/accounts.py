@@ -1,7 +1,17 @@
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from .models import db, Account, Transaction, Biller, BillPayment
+from flask import Response, stream_with_context
+from .models import db, Account, Transaction, Biller, BillPayment, Beneficiary, Notification
+import time
+import os
+import json
+
+try:
+    import stripe
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+except Exception:
+    stripe = None
 
 accounts_bp = Blueprint("accounts", __name__, url_prefix="/api")
 
@@ -92,6 +102,16 @@ def statement(account_id):
 @login_required
 def transfer():
     data = request.get_json(silent=True) or {}
+    # Allow sending to a saved beneficiary by id
+    if data.get("beneficiary_id"):
+        try:
+            beneficiary_id = int(data.get("beneficiary_id"))
+        except (TypeError, ValueError):
+            return jsonify(error="Invalid beneficiary id"), 400
+        beneficiary = Beneficiary.query.filter_by(id=beneficiary_id, user_id=current_user.id).first()
+        if not beneficiary:
+            return jsonify(error="Beneficiary not found"), 404
+        data["to_account_number"] = beneficiary.account_number
 
     try:
         from_account_id = int(data.get("from_account"))
@@ -135,6 +155,121 @@ def transfer():
 
     db.session.commit()
     return jsonify(message="Transfer successful", from_account=from_account.to_dict()), 200
+
+
+@accounts_bp.route('/beneficiaries', methods=['GET'])
+@login_required
+def list_beneficiaries():
+    bens = Beneficiary.query.filter_by(user_id=current_user.id).all()
+    return jsonify(beneficiaries=[b.to_dict() for b in bens])
+
+
+@accounts_bp.route('/beneficiaries', methods=['POST'])
+@login_required
+def add_beneficiary():
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    account_number = (data.get('account_number') or '').strip()
+    ifsc = (data.get('ifsc') or '').strip()
+
+    if not name or not account_number:
+        return jsonify(error='Name and account number are required'), 400
+
+    ben = Beneficiary(user_id=current_user.id, name=name, account_number=account_number, ifsc=ifsc)
+    db.session.add(ben)
+    db.session.commit()
+    return jsonify(beneficiary=ben.to_dict()), 201
+
+
+@accounts_bp.route('/beneficiaries/<int:beneficiary_id>', methods=['DELETE'])
+@login_required
+def delete_beneficiary(beneficiary_id):
+    ben = Beneficiary.query.filter_by(id=beneficiary_id, user_id=current_user.id).first()
+    if not ben:
+        return jsonify(error='Beneficiary not found'), 404
+    db.session.delete(ben)
+    db.session.commit()
+    return jsonify(message='Deleted'), 200
+
+
+@accounts_bp.route('/topup', methods=['POST'])
+@login_required
+def create_topup():
+    data = request.get_json(silent=True) or {}
+    try:
+        amount = float(data.get('amount'))
+    except (TypeError, ValueError):
+        return jsonify(error='Invalid amount'), 400
+
+    if amount <= 0:
+        return jsonify(error='Amount must be > 0'), 400
+
+    # If Stripe is configured, create a PaymentIntent
+    if stripe:
+        intent = stripe.PaymentIntent.create(
+            amount=int(amount * 100),
+            currency='inr',
+            metadata={'user_id': current_user.id},
+        )
+        return jsonify(client_secret=intent.client_secret, id=intent.id)
+
+    # Fallback: return a mock id for local testing
+    return jsonify(client_secret=None, id=f'mock_{int(time.time())}')
+
+
+@accounts_bp.route('/config', methods=['GET'])
+def get_config():
+    # Public config values useful to the frontend
+    return jsonify(stripe_publishable_key=os.environ.get('STRIPE_PUBLISHABLE_KEY'))
+
+
+@accounts_bp.route('/topup/confirm', methods=['POST'])
+@login_required
+def confirm_topup():
+    data = request.get_json(silent=True) or {}
+    payment_id = data.get('id')
+    amount = float(data.get('amount') or 0)
+
+    if not payment_id or amount <= 0:
+        return jsonify(error='Invalid input'), 400
+
+    # Credit first account for demo purposes
+    account = Account.query.filter_by(user_id=current_user.id).first()
+    if not account:
+        return jsonify(error='No account to credit'), 400
+
+    account.balance += amount
+    db.session.add(Transaction(
+        account_id=account.id, type='credit', category='topup', amount=amount,
+        description=f'Top-up ({payment_id})', balance_after=account.balance
+    ))
+    # add notification
+    db.session.add(Notification(user_id=current_user.id, message=f'Wallet topped up Rs. {amount:.2f}'))
+    db.session.commit()
+    return jsonify(message='Top-up credited', account=account.to_dict()), 200
+
+
+@accounts_bp.route('/notifications', methods=['GET'])
+@login_required
+def list_notifications():
+    nots = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.timestamp.desc()).limit(50).all()
+    return jsonify(notifications=[n.to_dict() for n in nots])
+
+
+@accounts_bp.route('/notifications/stream')
+@login_required
+def stream_notifications():
+    def event_stream(last_id=None):
+        last = int(last_id) if last_id else 0
+        while True:
+            rows = Notification.query.filter(Notification.user_id == current_user.id, Notification.id > last).order_by(Notification.id.asc()).all()
+            for r in rows:
+                last = r.id
+                yield 'data: ' + json.dumps(r.to_dict()) + '\n\n'
+            time.sleep(2)
+
+    last = request.args.get('last')
+    return Response(stream_with_context(event_stream(last)), mimetype='text/event-stream')
 
 
 @accounts_bp.route("/billers", methods=["GET"])

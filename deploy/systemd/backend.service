@@ -1,0 +1,18 @@
+[Unit]
+Description=SecureBank Flask backend
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Bank-APP/backend
+Environment="PATH=/home/ubuntu/Bank-APP/backend/venv/bin"
+Environment=DB_HOST=database-1.chms0yoogkhs.ap-south-1.rds.amazonaws.com
+Environment=DB_PORT=3306
+Environment=DB_NAME=bankdb
+Environment=DB_USER=admin
+Environment=DB_PASSWORD=sanjayvg0612
+ExecStart=/home/ubuntu/Bank-APP/backend/venv/bin/python run.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
